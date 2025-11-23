@@ -1,9 +1,9 @@
 package ru.netology.delivery.test;
 
 import com.codeborne.selenide.Selectors;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import com.codeborne.selenide.logevents.SelenideLogger;
+import io.qameta.allure.selenide.AllureSelenide;
+import org.junit.jupiter.api.*;
 import org.openqa.selenium.Keys;
 import ru.netology.delivery.data.DataGenerator;
 
@@ -14,6 +14,16 @@ import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.open;
 
 class DeliveryTest {
+
+    @BeforeAll
+    static void setUpAll() {
+        SelenideLogger.addListener("allure", new AllureSelenide());
+    }
+
+    @AfterAll
+    static void tearDownAll() {
+        SelenideLogger.removeListener("allure");
+    }
 
     @BeforeEach
     void setup() {
@@ -54,5 +64,25 @@ class DeliveryTest {
                 .shouldHave(exactText("Встреча успешно запланирована на " + secondMeetingDate))
                 .shouldBe(visible);
 
+    }
+
+    @Test
+    @DisplayName("Should get error notification if wrong phone")
+    void shouldGetErrorNotificationIfWrongPhone() {
+        var validUser = DataGenerator.Registration.generateUser("ru");
+        var daysToAddForFirstMeeting = 4;
+        var firstMeetingDate = DataGenerator.generateDate(daysToAddForFirstMeeting);
+        var wrongPhone = DataGenerator.generateWrongPhone("ru");
+
+        $("[data-test-id=city] input").setValue(validUser.getCity());
+        $("[data-test-id=date] input").press(Keys.chord(Keys.SHIFT, Keys.HOME)).press(Keys.BACK_SPACE);
+        $("[data-test-id=date] input").setValue(firstMeetingDate);
+        $("[data-test-id=name] input").setValue(validUser.getName());
+        $("[data-test-id=phone] input").setValue(wrongPhone);
+        $("[data-test-id=agreement]").click();
+        $(Selectors.byText("Запланировать")).click();
+        $("[data-test-id='phone'].input_invalid .input__sub")
+                .shouldHave(exactText("Неверный формат номера мобильного телефона"))
+                .shouldBe(visible);
     }
 }
